@@ -3,6 +3,7 @@ package portworx
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"math"
 	"os"
 	"os/exec"
@@ -37,9 +38,9 @@ import (
 )
 
 const (
-	//PortworxStorage portworx storage name
+	// PortworxStorage portworx storage name
 	portworxStorage torpedovolume.StorageProvisionerType = "portworx"
-	//CsiStorage csi storage name
+	// CsiStorage csi storage name
 	csiStorage torpedovolume.StorageProvisionerType = "csi"
 )
 
@@ -607,9 +608,9 @@ func (d *portworx) ValidateCreateVolume(volumeName string, params map[string]str
 		case api.SpecSnapshotSchedule:
 			// TODO currently volume spec has a different format than request
 			// i.e request "daily=12:00,7" turns into "- freq: daily\n  hour: 12\n  retain: 7\n" in volume spec
-			//if requestedSpec.SnapshotSchedule != vol.Spec.SnapshotSchedule {
+			// if requestedSpec.SnapshotSchedule != vol.Spec.SnapshotSchedule {
 			//	return errFailedToInspectVolume(name, k, requestedSpec.SnapshotSchedule, vol.Spec.SnapshotSchedule)
-			//}
+			// }
 		case api.SpecAggregationLevel:
 			if requestedSpec.AggregationLevel != vol.Spec.AggregationLevel {
 				return errFailedToInspectVolume(volumeName, k, requestedSpec.AggregationLevel, vol.Spec.AggregationLevel)
@@ -2058,12 +2059,12 @@ func (d *portworx) EstimateVolumeExpandSize(apRule apapi.AutopilotRule, initialS
 	//	The goal of the below for loop is to keep increasing calculatedTotalSize until the rule conditions match
 	for {
 		for _, conditionExpression := range apRule.Spec.Conditions.Expressions {
-			var metricValue float64
+			var expectedMetricValue float64
 			switch conditionExpression.Key {
 			case aututils.PxVolumeUsagePercentMetric:
-				metricValue = float64(int64(workloadSize)) * 100 / float64(calculatedTotalSize)
+				expectedMetricValue = float64(int64(workloadSize)) * 100 / float64(calculatedTotalSize)
 			case aututils.PxVolumeTotalCapacityMetric:
-				metricValue = float64(calculatedTotalSize) / units.GB
+				expectedMetricValue = float64(calculatedTotalSize) / units.GB
 			default:
 				return 0, &tp_errors.ErrNotSupported{
 					Type:      conditionExpression.Key,
@@ -2071,7 +2072,7 @@ func (d *portworx) EstimateVolumeExpandSize(apRule apapi.AutopilotRule, initialS
 				}
 			}
 
-			if doesConditionMatch(metricValue, conditionExpression) {
+			if doesConditionMatch(expectedMetricValue, conditionExpression) {
 				for _, ruleAction := range apRule.Spec.Actions {
 					actionScalePercentage, err := strconv.ParseUint(ruleAction.Params[aututils.RuleActionsScalePercentage], 10, 64)
 					if err != nil {
@@ -2083,12 +2084,19 @@ func (d *portworx) EstimateVolumeExpandSize(apRule apapi.AutopilotRule, initialS
 
 					// check if calculated size is more than maxsize
 					if actionMaxSize, ok := ruleAction.Params[aututils.RuleMaxSize]; ok {
-						maxSize, _ := strconv.ParseUint(actionMaxSize, 10, 64)
-						if maxSize != 0 && calculatedTotalSize > maxSize {
+						maxSize, err := strconv.ParseUint(actionMaxSize, 10, 64)
+						if err != nil {
+							a, err1 := resource.ParseQuantity(actionMaxSize)
+							if err1 != nil {
+								logrus.Errorf("Can't parse actionMaxSize: '%s', cause err: %s/%s", actionMaxSize, err, err1)
+								return 0, err
+							}
+							maxSize = uint64(a.Value())
+						}
+						if maxSize != 0 && calculatedTotalSize >= maxSize {
 							return maxSize, nil
 						}
 					}
-
 				}
 			} else {
 				return calculatedTotalSize, nil
@@ -2097,10 +2105,10 @@ func (d *portworx) EstimateVolumeExpandSize(apRule apapi.AutopilotRule, initialS
 	}
 }
 
-func doesConditionMatch(metricValue float64, conditionExpression *apapi.LabelSelectorRequirement) bool {
+func doesConditionMatch(expectedMetricValue float64, conditionExpression *apapi.LabelSelectorRequirement) bool {
 	condExprValue, _ := strconv.ParseFloat(conditionExpression.Values[0], 64)
-	return metricValue < condExprValue && conditionExpression.Operator == apapi.LabelSelectorOpLt ||
-		metricValue > condExprValue && conditionExpression.Operator == apapi.LabelSelectorOpGt
+	return expectedMetricValue <= condExprValue && conditionExpression.Operator == apapi.LabelSelectorOpLt ||
+		expectedMetricValue >= condExprValue && conditionExpression.Operator == apapi.LabelSelectorOpGt
 
 }
 

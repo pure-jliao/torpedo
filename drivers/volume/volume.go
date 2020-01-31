@@ -149,7 +149,7 @@ type Driver interface {
 	// IsStorageExpansionEnabled returns true if storage expansion enabled
 	IsStorageExpansionEnabled() (bool, error)
 
-	//EstimatePoolExpandSize calculates expected pool size based on autopilot rule
+	// EstimatePoolExpandSize calculates expected pool size based on autopilot rule
 	EstimatePoolExpandSize(apRule apapi.AutopilotRule, pool node.StoragePool, node node.Node) (uint64, error)
 	// EstimatePoolExpandSize calculates expected volume size based on autopilot rule, initial and workload sizes
 	EstimateVolumeExpandSize(apRule apapi.AutopilotRule, initialSize, workloadSize uint64) (uint64, error)

@@ -367,7 +367,7 @@ func (d *dcos) GetVolumeParameters(ctx *scheduler.Context) (map[string]map[strin
 	return result, nil
 }
 
-func (d *dcos) InspectVolumes(ctx *scheduler.Context, timeout, retryInterval time.Duration) error {
+func (d *dcos) ValidateVolumes(ctx *scheduler.Context, timeout, retryInterval time.Duration) error {
 	inspectDockerVolumeFunc := func(volName string, _ map[string]string) error {
 		t := func() (interface{}, bool, error) {
 			out, err := d.dockerClient.VolumeInspect(context.Background(), volName)

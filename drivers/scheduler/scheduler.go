@@ -124,8 +124,8 @@ type Driver interface {
 	// GetVolumeParameters Returns a maps, each item being a volume and it's options
 	GetVolumeParameters(*Context) (map[string]map[string]string, error)
 
-	// InspectVolumes inspects a storage volume.
-	InspectVolumes(cc *Context, timeout, retryInterval time.Duration) error
+	// ValidateVolumes inspects a storage volume.
+	ValidateVolumes(cc *Context, timeout, retryInterval time.Duration) error
 
 	// DeleteVolumes will delete all storage volumes for the given context
 	DeleteVolumes(*Context) ([]*volume.Volume, error)

@@ -109,3 +109,49 @@ func getTestNode(poolSize, totalDisks uint64, medium api.StorageMedium) node.Nod
 		StorageNode: api.StorageNode{Disks: disks},
 	}
 }
+
+func TestEstimatedVolumeSize(t *testing.T) {
+	driver := portworx{}
+	testCases := []struct {
+		rule          apapi.AutopilotRule
+		initialSize   uint64
+		workloadSize  uint64
+		result        uint64
+		errorExpected bool
+	}{
+		{
+			rule:          aututils.VolumeRuleByTotalSize(5, 100, "10Gi"),
+			initialSize:   5 * units.GiB,
+			workloadSize:  10 * units.GiB,
+			result:        10 * units.GiB,
+			errorExpected: false,
+		},
+		{
+			rule:          aututils.VolumeRuleByTotalSize(5, 100, "12Gi"),
+			initialSize:   5 * units.GiB,
+			workloadSize:  10 * units.GiB,
+			result:        12 * units.GiB,
+			errorExpected: false,
+		},
+		{
+			rule:          aututils.PvcRuleByUsageCapacity(50, 100, ""),
+			initialSize:   10 * units.GiB,
+			workloadSize:  10 * units.GiB,
+			result:        40 * units.GiB,
+			errorExpected: false,
+		},
+		{
+			rule:          aututils.PvcRuleByUsageCapacity(50, 100, "12Gi"),
+			initialSize:   10 * units.GiB,
+			workloadSize:  10 * units.GiB,
+			result:        12 * units.GiB,
+			errorExpected: false,
+		},
+	}
+	for _, tc := range testCases {
+		size, err := driver.EstimateVolumeExpandSize(tc.rule, tc.initialSize, tc.workloadSize)
+		msg := fmt.Sprintf("Expected: %v, got: %v", tc.result, size)
+		require.NoError(t, err)
+		require.Equal(t, tc.result, size, msg)
+	}
+}

@@ -64,12 +64,12 @@ const (
 	volDirCleanupTimeout   = 5 * time.Minute
 	k8sObjectCreateTimeout = 2 * time.Minute
 	k8sDestroyTimeout      = 2 * time.Minute
-	//FindFilesOnWorkerTimeout timeout for find files on worker
+	// FindFilesOnWorkerTimeout timeout for find files on worker
 	FindFilesOnWorkerTimeout = 1 * time.Minute
 	deleteTasksWaitTimeout   = 3 * time.Minute
-	//DefaultRetryInterval  Default retry interval
+	// DefaultRetryInterval  Default retry interval
 	DefaultRetryInterval = 10 * time.Second
-	//DefaultTimeout default timeout
+	// DefaultTimeout default timeout
 	DefaultTimeout = 2 * time.Minute
 
 	defaultTriggerCheckInterval          = 5 * time.Second
@@ -95,7 +95,7 @@ var (
 	}
 )
 
-//K8s  The kubernetes structure
+// K8s  The kubernetes structure
 type K8s struct {
 	SpecFactory         *spec.Factory
 	NodeDriverName      string
@@ -104,7 +104,7 @@ type K8s struct {
 	customConfig        map[string]scheduler.AppConfig
 }
 
-//IsNodeReady  Check whether the cluster node is ready
+// IsNodeReady  Check whether the cluster node is ready
 func (k *K8s) IsNodeReady(n node.Node) error {
 	t := func() (interface{}, bool, error) {
 		if err := k8sops.Instance().IsNodeReady(n.Name); err != nil {
@@ -129,7 +129,7 @@ func (k *K8s) String() string {
 	return SchedName
 }
 
-//Init Initialize the driver
+// Init Initialize the driver
 func (k *K8s) Init(schedOpts scheduler.InitOptions) error {
 	k.NodeDriverName = schedOpts.NodeDriverName
 	k.VolDriverName = schedOpts.VolDriverName
@@ -165,7 +165,7 @@ func (k *K8s) addNewNode(newNode v1.Node) error {
 	return nil
 }
 
-//RescanSpecs Rescan the application spec file
+// RescanSpecs Rescan the application spec file
 //
 func (k *K8s) RescanSpecs(specDir string) error {
 	var err error
@@ -177,7 +177,7 @@ func (k *K8s) RescanSpecs(specDir string) error {
 	return nil
 }
 
-//RefreshNodeRegistry update the k8 node list registry
+// RefreshNodeRegistry update the k8 node list registry
 //
 func (k *K8s) RefreshNodeRegistry() error {
 
@@ -196,7 +196,7 @@ func (k *K8s) RefreshNodeRegistry() error {
 	return nil
 }
 
-//ParseSpecs parses the application spec file
+// ParseSpecs parses the application spec file
 func (k *K8s) ParseSpecs(specDir string) ([]interface{}, error) {
 	fileList := make([]string, 0)
 	if err := filepath.Walk(specDir, func(path string, f os.FileInfo, err error) error {
@@ -347,7 +347,7 @@ func validateSpec(in interface{}) (interface{}, error) {
 	return nil, fmt.Errorf("unsupported object: %v", reflect.TypeOf(in))
 }
 
-//getAddressesForNode  Get IP address for the nodes in the cluster
+// getAddressesForNode  Get IP address for the nodes in the cluster
 //
 func (k *K8s) getAddressesForNode(n v1.Node) []string {
 	var addrs []string
@@ -359,7 +359,7 @@ func (k *K8s) getAddressesForNode(n v1.Node) []string {
 	return addrs
 }
 
-//parseK8SNode Parse the kubernetes clsuter nodes
+// parseK8SNode Parse the kubernetes clsuter nodes
 //
 func (k *K8s) parseK8SNode(n v1.Node) node.Node {
 	var nodeType node.Type
@@ -393,7 +393,7 @@ func (k *K8s) parseK8SNode(n v1.Node) node.Node {
 	}
 }
 
-//Schedule Schedule the application
+// Schedule Schedule the application
 func (k *K8s) Schedule(instanceID string, options scheduler.ScheduleOptions) ([]*scheduler.Context, error) {
 	var apps []*spec.AppSpec
 	if len(options.AppKeys) > 0 {
@@ -1203,7 +1203,7 @@ func (k *K8s) substituteNamespaceInVolumes(volumes []v1.Volume, ns string) []v1.
 	return updatedVolumes
 }
 
-//WaitForRunning   wait for running
+// WaitForRunning   wait for running
 //
 func (k *K8s) WaitForRunning(ctx *scheduler.Context, timeout, retryInterval time.Duration) error {
 	k8sOps := k8sops.Instance()
@@ -1353,7 +1353,7 @@ func (k *K8s) WaitForRunning(ctx *scheduler.Context, timeout, retryInterval time
 	return nil
 }
 
-//Destroy destroy
+// Destroy destroy
 func (k *K8s) Destroy(ctx *scheduler.Context, opts map[string]bool) error {
 	var podList []v1.Pod
 	k8sOps := k8sops.Instance()
@@ -1485,7 +1485,7 @@ func (k *K8s) getVolumeDirPath(podUID types.UID) string {
 	return filepath.Join(k8sPodsRootDir, string(podUID), "volumes")
 }
 
-//WaitForDestroy wait for schedule context destroy
+// WaitForDestroy wait for schedule context destroy
 //
 func (k *K8s) WaitForDestroy(ctx *scheduler.Context, timeout time.Duration) error {
 	k8sOps := k8sops.Instance()
@@ -1532,7 +1532,7 @@ func (k *K8s) WaitForDestroy(ctx *scheduler.Context, timeout time.Duration) erro
 	return nil
 }
 
-//DeleteTasks delete the task
+// DeleteTasks delete the task
 func (k *K8s) DeleteTasks(ctx *scheduler.Context, opts *scheduler.DeleteTasksOptions) error {
 	fn := "DeleteTasks"
 	deleteTasks := func() error {
@@ -1614,7 +1614,7 @@ func (k *K8s) DeleteTasks(ctx *scheduler.Context, opts *scheduler.DeleteTasksOpt
 	return deleteTasks()
 }
 
-//GetVolumeParameters Get the volume parameters
+// GetVolumeParameters Get the volume parameters
 func (k *K8s) GetVolumeParameters(ctx *scheduler.Context) (map[string]map[string]string, error) {
 	k8sOps := k8sops.Instance()
 	result := make(map[string]map[string]string)
@@ -1717,8 +1717,8 @@ func (k *K8s) GetVolumeParameters(ctx *scheduler.Context) (map[string]map[string
 	return result, nil
 }
 
-//InspectVolumes Insepect the volumes
-func (k *K8s) InspectVolumes(ctx *scheduler.Context, timeout, retryInterval time.Duration) error {
+// ValidateVolumes Validates the volumes
+func (k *K8s) ValidateVolumes(ctx *scheduler.Context, timeout, retryInterval time.Duration) error {
 	var err error
 	k8sOps := k8sops.Instance()
 	for _, specObj := range ctx.App.SpecList {
@@ -1757,11 +1757,18 @@ func (k *K8s) InspectVolumes(ctx *scheduler.Context, timeout, retryInterval time
 					if expectedPVCSize, err = k.getExpectedAutopilotSizeForPvc(obj, listApRules, wSize); err != nil {
 						return err
 					}
-					logrus.Infof("[%v] expecting PVC size: %+v\n", ctx.App.Key, expectedPVCSize)
+					logrus.Infof("[%v] expecting PVC size: %v\n", ctx.App.Key, expectedPVCSize)
 					if err := k8sOps.ValidatePersistentVolumeClaimSize(obj, int64(expectedPVCSize), timeout, retryInterval); err != nil {
 						return &scheduler.ErrFailedToValidateStorage{
 							App:   ctx.App,
 							Cause: fmt.Sprintf("Failed to validate size: %v of PVC: %v. Err: %v", expectedPVCSize, obj.Name, err),
+						}
+					}
+					err = k.ValidateEvents(obj, listApRules)
+					if err != nil {
+						return &scheduler.ErrFailedToValidateStorage{
+							App:   ctx.App,
+							Cause: err.Error(),
 						}
 					}
 					logrus.Infof("[%v] Validated PVC: %v size based on Autopilot rules", ctx.App.Key, obj.Name)
@@ -1835,7 +1842,7 @@ func (k *K8s) isPVCShared(pvc *v1.PersistentVolumeClaim) bool {
 	return false
 }
 
-//DeleteVolumes  delete the volumes
+// DeleteVolumes  delete the volumes
 func (k *K8s) DeleteVolumes(ctx *scheduler.Context) ([]*volume.Volume, error) {
 	k8sOps := k8sops.Instance()
 	var vols []*volume.Volume
@@ -1925,7 +1932,7 @@ func (k *K8s) DeleteVolumes(ctx *scheduler.Context) ([]*volume.Volume, error) {
 	return vols, nil
 }
 
-//GetVolumes  Get the volumes
+// GetVolumes  Get the volumes
 //
 func (k *K8s) GetVolumes(ctx *scheduler.Context) ([]*volume.Volume, error) {
 	k8sOps := k8sops.Instance()
@@ -1979,7 +1986,7 @@ func (k *K8s) GetVolumes(ctx *scheduler.Context) ([]*volume.Volume, error) {
 	return vols, nil
 }
 
-//ResizeVolume  Resize the volume
+// ResizeVolume  Resize the volume
 func (k *K8s) ResizeVolume(ctx *scheduler.Context, configMapName string) ([]*volume.Volume, error) {
 	k8sOps := k8sops.Instance()
 	var vols []*volume.Volume
@@ -2068,7 +2075,7 @@ func (k *K8s) resizePVCBy1GB(ctx *scheduler.Context, pvc *v1.PersistentVolumeCla
 	return vol, nil
 }
 
-//GetSnapshots  Get the snapshots
+// GetSnapshots  Get the snapshots
 func (k *K8s) GetSnapshots(ctx *scheduler.Context) ([]*volume.Snapshot, error) {
 	var snaps []*volume.Snapshot
 	for _, specObj := range ctx.App.SpecList {
@@ -2099,7 +2106,7 @@ func (k *K8s) GetSnapshots(ctx *scheduler.Context) ([]*volume.Snapshot, error) {
 	return snaps, nil
 }
 
-//GetNodesForApp get the node for the app
+// GetNodesForApp get the node for the app
 //
 func (k *K8s) GetNodesForApp(ctx *scheduler.Context) ([]node.Node, error) {
 	t := func() (interface{}, bool, error) {
@@ -2180,7 +2187,7 @@ func (k *K8s) getPodsForApp(ctx *scheduler.Context) ([]v1.Pod, error) {
 	return pods, nil
 }
 
-//Describe describe the test case
+// Describe describe the test case
 func (k *K8s) Describe(ctx *scheduler.Context) (string, error) {
 	k8sOps := k8sops.Instance()
 	var buf bytes.Buffer
@@ -2195,7 +2202,7 @@ func (k *K8s) Describe(ctx *scheduler.Context) (string, error) {
 					Cause: fmt.Sprintf("Failed to get status of deployment: %v. Err: %v", obj.Name, err),
 				}))
 			}
-			//Dump depStatus
+			// Dump depStatus
 			buf.WriteString(fmt.Sprintf("%+v\n", *depStatus))
 			buf.WriteString(fmt.Sprintf("%v", dumpEvents(obj.Namespace, "Deployment", obj.Name)))
 			pods, _ := k8sOps.GetDeploymentPods(obj)
@@ -2212,7 +2219,7 @@ func (k *K8s) Describe(ctx *scheduler.Context) (string, error) {
 					Cause: fmt.Sprintf("Failed to get status of statefulset: %v. Err: %v", obj.Name, err),
 				}))
 			}
-			//Dump ssetStatus
+			// Dump ssetStatus
 			buf.WriteString(fmt.Sprintf("%+v\n", *ssetStatus))
 			buf.WriteString(fmt.Sprintf("%v", dumpEvents(obj.Namespace, "StatefulSet", obj.Name)))
 			pods, _ := k8sOps.GetStatefulSetPods(obj)
@@ -2229,7 +2236,7 @@ func (k *K8s) Describe(ctx *scheduler.Context) (string, error) {
 					Cause: fmt.Sprintf("Failed to get status of service: %v. Err: %v", obj.Name, err),
 				}))
 			}
-			//Dump service status
+			// Dump service status
 			buf.WriteString(fmt.Sprintf("%+v\n", *svcStatus))
 			buf.WriteString(fmt.Sprintf("%v", dumpEvents(obj.Namespace, "Service", obj.Name)))
 			buf.WriteString(insertLineBreak("END Service"))
@@ -2242,7 +2249,7 @@ func (k *K8s) Describe(ctx *scheduler.Context) (string, error) {
 					Cause: fmt.Sprintf("Failed to get status of persistent volume claim: %v. Err: %v", obj.Name, err),
 				}))
 			}
-			//Dump persistent volume claim status
+			// Dump persistent volume claim status
 			buf.WriteString(fmt.Sprintf("%+v\n", *pvcStatus))
 			buf.WriteString(fmt.Sprintf("%v", dumpEvents(obj.Namespace, "PersistentVolumeClaim", obj.Name)))
 			buf.WriteString(insertLineBreak("END PersistentVolumeClaim"))
@@ -2255,7 +2262,7 @@ func (k *K8s) Describe(ctx *scheduler.Context) (string, error) {
 					Cause: fmt.Sprintf("Failed to get parameters of storage class: %v. Err: %v", obj.Name, err),
 				}))
 			}
-			//Dump storage class parameters
+			// Dump storage class parameters
 			buf.WriteString(fmt.Sprintf("%+v\n", scParams))
 			buf.WriteString(fmt.Sprintf("%v", dumpEvents(obj.Namespace, "StorageClass", obj.Name)))
 			buf.WriteString(insertLineBreak("END StorageClass"))
@@ -2419,7 +2426,7 @@ func (k *K8s) Describe(ctx *scheduler.Context) (string, error) {
 	return buf.String(), nil
 }
 
-//ScaleApplication  Scale the application
+// ScaleApplication  Scale the application
 func (k *K8s) ScaleApplication(ctx *scheduler.Context, scaleFactorMap map[string]int32) error {
 	k8sOps := k8sops.Instance()
 	for _, specObj := range ctx.App.SpecList {
@@ -2461,7 +2468,7 @@ func (k *K8s) ScaleApplication(ctx *scheduler.Context, scaleFactorMap map[string
 	return nil
 }
 
-//GetScaleFactorMap Get scale Factory map
+// GetScaleFactorMap Get scale Factory map
 //
 func (k *K8s) GetScaleFactorMap(ctx *scheduler.Context) (map[string]int32, error) {
 	k8sOps := k8sops.Instance()
@@ -2484,7 +2491,7 @@ func (k *K8s) GetScaleFactorMap(ctx *scheduler.Context) (map[string]int32, error
 	return scaleFactorMap, nil
 }
 
-//StopSchedOnNode stop schedule on node
+// StopSchedOnNode stop schedule on node
 func (k *K8s) StopSchedOnNode(n node.Node) error {
 	driver, _ := node.Get(k.NodeDriverName)
 	systemOpts := node.SystemctlOpts{
@@ -2505,7 +2512,7 @@ func (k *K8s) StopSchedOnNode(n node.Node) error {
 	return nil
 }
 
-//StartSchedOnNode start schedule on node
+// StartSchedOnNode start schedule on node
 func (k *K8s) StartSchedOnNode(n node.Node) error {
 	driver, _ := node.Get(k.NodeDriverName)
 	systemOpts := node.SystemctlOpts{
@@ -2526,17 +2533,17 @@ func (k *K8s) StartSchedOnNode(n node.Node) error {
 	return nil
 }
 
-//EnableSchedulingOnNode enable apps to be scheduled to a given k8s worker node
+// EnableSchedulingOnNode enable apps to be scheduled to a given k8s worker node
 func (k *K8s) EnableSchedulingOnNode(n node.Node) error {
 	return k8sops.Instance().UnCordonNode(n.Name, DefaultTimeout, DefaultRetryInterval)
 }
 
-//DisableSchedulingOnNode disable apps to be scheduled to a given k8s worker node
+// DisableSchedulingOnNode disable apps to be scheduled to a given k8s worker node
 func (k *K8s) DisableSchedulingOnNode(n node.Node) error {
 	return k8sops.Instance().CordonNode(n.Name, DefaultTimeout, DefaultRetryInterval)
 }
 
-//IsScalable check whether scalable
+// IsScalable check whether scalable
 func (k *K8s) IsScalable(spec interface{}) bool {
 	if obj, ok := spec.(*appsapi.Deployment); ok {
 		dep, err := k8sops.Instance().GetDeployment(obj.Name, obj.Namespace)
@@ -2663,7 +2670,7 @@ func (k *K8s) getPodsUsingStorage(pods []v1.Pod, provisioner string) []v1.Pod {
 	return podsUsingStorage
 }
 
-//PrepareNodeToDecommission Prepare the Node for decommission
+// PrepareNodeToDecommission Prepare the Node for decommission
 func (k *K8s) PrepareNodeToDecommission(n node.Node, provisioner string) error {
 	k8sOps := k8sops.Instance()
 	pods, err := k8sOps.GetPodsByNode(n.Name, "")
@@ -2901,7 +2908,7 @@ func (k *K8s) destroyBackupObjects(
 	return nil
 }
 
-// getExpectedAutopilotSizeForPvc calculates exected size of PVC based on autopilot rules and workload
+// getExpectedAutopilotSizeForPvc calculates expected size of PVC based on autopilot rules and workload
 func (k *K8s) getExpectedAutopilotSizeForPvc(pvc *v1.PersistentVolumeClaim, apRules *apapi.AutopilotRuleList, wSize uint64) (uint64, error) {
 	var (
 		err             error
@@ -2927,6 +2934,55 @@ func (k *K8s) getExpectedAutopilotSizeForPvc(pvc *v1.PersistentVolumeClaim, apRu
 		}
 	}
 	return expectedPVCSize, nil
+}
+
+// ValidateEvents verifies proper alerts and events on resize completion
+func (k *K8s) ValidateEvents(pvc *v1.PersistentVolumeClaim, apRules *apapi.AutopilotRuleList) error {
+
+	// wait until autopilot posts all events
+	time.Sleep(time.Minute)
+
+	successEvens := []string{
+		"Initializing => Normal",
+		"Normal => Triggered",
+		"Triggered => ActiveActionsPending",
+		"ActiveActionsPending => ActiveActionsInProgress",
+		"ActiveActionsInProgress => ActiveActionsTaken",
+	}
+
+	for _, apRule := range apRules.Items {
+		if isAutopilotMatchPvcLabels(apRule, pvc) {
+
+			fields := fmt.Sprintf("involvedObject.kind=%s,involvedObject.name=%s", "AutopilotRule", apRule.Name)
+			events, err := k8sops.Instance().ListEvents("", metav1.ListOptions{FieldSelector: fields})
+			if err != nil {
+				return err
+			}
+
+			eventMap := make(map[string]bool)
+			for _, event := range events.Items {
+				if time.Since(event.CreationTimestamp.Time).Hours() > float64(1) {
+					logrus.Infof("Can't capture all events for %s:%s, since resize has started more that 1h ago", apRule.Name, pvc.Name)
+					return nil
+				}
+
+				// cut last 3 entries from a message like `rule: pvc:pvc-25c transition from ActiveActionsInProgress => ActiveActionsTaken`
+				transitionMsg := strings.Split(event.Message, " ")
+				eventMap[strings.Join(transitionMsg[len(transitionMsg)-3:], " ")] = true
+			}
+			return checkEvents(successEvens, eventMap)
+		}
+	}
+	return nil
+}
+
+func checkEvents(successEvens []string, eventMap map[string]bool) error {
+	for _, expectedEvent := range successEvens {
+		if _, ok := eventMap[expectedEvent]; !ok {
+			return fmt.Errorf("failed to validate events. Expected %s", expectedEvent)
+		}
+	}
+	return nil
 }
 
 func isAutopilotMatchPvcLabels(apRule apapi.AutopilotRule, pvc *v1.PersistentVolumeClaim) bool {
@@ -2973,7 +3029,7 @@ func (k *K8s) AddLabelOnNode(n node.Node, lKey string, lValue string) error {
 	return nil
 }
 
-//IsAutopilotEnabledForVolume checks if autopilot enabled for a given volume
+// IsAutopilotEnabledForVolume checks if autopilot enabled for a given volume
 func (k *K8s) IsAutopilotEnabledForVolume(vol *volume.Volume) bool {
 	autopilotEnabled := false
 	if volAnnotationValue, ok := vol.Annotations[autopilotEnabledAnnotationKey]; ok {
