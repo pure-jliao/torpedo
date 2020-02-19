@@ -13,48 +13,6 @@ type Image struct {
 	Version string
 }
 
-// Request struct for Backup parameters
-type Request struct {
-	// Organization ID
-	OrgID string
-	// CloudCredential object name
-	CloudCredentialName string
-	// BackupLocation object name
-	BackupLocationName string
-	// Cluster object name
-	ClusterName string
-	// Backup object name
-	BackupName string
-	// Labels
-	Labels map[string]string
-	// Namespaces
-	NameSpaces []string
-	// Token
-	Token string
-	// Kubeconfig
-	Kubeconfig string
-	// BackupLocationPath
-	BackupLocationPath string
-	// Encryption Key
-	EncKey string
-	// Provider (AWS, Azure, Google)
-	Provider string
-	// S3 endpoint
-	S3Endpoint string
-	// S3 region
-	S3Region string
-	// DisableSsl
-	DisableSsl bool
-	// DisablePathStyle
-	DisablePathStyle bool
-	// Owner
-	Owner string
-	// AccessKey
-	AccessKey string
-	// SecretKey
-	SecretKey string
-}
-
 // Driver for backup
 type Driver interface {
 	// Init initializes the backup driver under a given scheduler
@@ -67,7 +25,7 @@ type Driver interface {
 // Org object interface
 type Org interface {
 	// CreateOrganization creates Organization
-	CreateOrganization(req *Request) (*api.OrganizationCreateResponse, error)
+	CreateOrganization(req *api.OrganizationCreateRequest) (*api.OrganizationCreateResponse, error)
 
 	// GetOrganization enumerates organizations
 	EnumerateOrganization() (*api.OrganizationEnumerateResponse, error)
@@ -76,61 +34,61 @@ type Org interface {
 // CloudCredential object interface
 type CloudCredential interface {
 	// CreateCloudCredential creates cloud credential objects
-	CreateCloudCredential(req *Request) (*api.CloudCredentialCreateResponse, error)
+	CreateCloudCredential(req *api.CloudCredentialCreateRequest) (*api.CloudCredentialCreateResponse, error)
 
 	// InspectCloudCredential describes the cloud credential
-	InspectCloudCredential(req *Request) (*api.CloudCredentialInspectResponse, error)
+	InspectCloudCredential(req *api.CloudCredentialInspectRequest) (*api.CloudCredentialInspectResponse, error)
 
 	// EnumerateCloudCredential lists the cloud credentials for given Org
-	EnumerateCloudCredential(req *Backup) (*api.CloudCredentialEnumerateResponse, error)
+	EnumerateCloudCredential(req *api.CloudCredentialEnumerateRequest) (*api.CloudCredentialEnumerateResponse, error)
 
 	// DeletrCloudCredential deletes a cloud credential object
-	DeleteCloudCredential(req *Request) (*api.CloudCredentialDeleteResponse, error)
+	DeleteCloudCredential(req *api.CloudCredentialDeleteRequest) (*api.CloudCredentialDeleteResponse, error)
 }
 
 // Cluster obj interface
 type Cluster interface {
 	// CreateCluster creates a cluste object
-	CreateCluster(req *Request) (*api.ClusterCreateResponse, error)
+	CreateCluster(req *api.ClusterCreateRequest) (*api.ClusterCreateResponse, error)
 
 	// EnumerateCluster enumerates the cluster objects
-	EnumerateCluster(req *Request) (*api.ClusterEnumerateResponse, error)
+	EnumerateCluster(req *api.ClusterEnumerateRequest) (*api.ClusterEnumerateResponse, error)
 
 	// InsepctCluster describes a cluster
-	InspectCluster(req *Request) (*api.ClusterInspectResponse, error)
+	InspectCluster(req *api.ClusterInspectRequest) (*api.ClusterInspectResponse, error)
 
 	// DeleteCluster deletes a cluster object
-	DeleteCluster(req *Request) (*api.ClusterDeleteResponse, error)
+	DeleteCluster(req *api.ClusterDeleteRequest) (*api.ClusterDeleteResponse, error)
 }
 
 // BLocation obj interface
 type BLocation interface {
 	// CreateBackupLocation creates backup location object
-	CreateBackupLocation(req *Request) (*api.BackupLocationCreateResponse, error)
+	CreateBackupLocation(req *api.BackupLocationCreateRequest) (*api.BackupLocationCreateResponse, error)
 
 	// EnumerateBackupLocation lists backup locations for an org
-	EnumerateBackupLocation(req *Request) (*api.BackupLocationEnumerateResponse, error)
+	EnumerateBackupLocation(req *api.BackupLocationEnumerateRequest) (*api.BackupLocationEnumerateResponse, error)
 
 	// InspectBackupLocation enumerates backup location objects
-	InspectBackupLocation(req *Request) (*api.BackupLocationInspectResponse, error)
+	InspectBackupLocation(req *api.BackupLocationInspectRequest) (*api.BackupLocationInspectResponse, error)
 
 	// DeleteBackupLocation deletes backup location objects
-	DeleteBackupLocation(req *Request) (*api.BackupLocationDeleteResponse, error)
+	DeleteBackupLocation(req *api.BackupLocationDeleteRequest) (*api.BackupLocationDeleteResponse, error)
 }
 
 // Backup obj interface
 type Backup interface {
 	// CreateBackup creates backup
-	CreateBackup(req *Request) (*api.BackupCreateResponse, error)
+	CreateBackup(req *api.BackupCreateRequest) (*api.BackupCreateResponse, error)
 
 	// EnumerateBackup enumerates backup objects
-	EnumerateBackup(req *Request) (*api.BackupEnumerateResponse, error)
+	EnumerateBackup(req *api.BackupEnumerateRequest) (*api.BackupEnumerateResponse, error)
 
 	// InspectBackup inspects a backup object
-	InspectBackup(req *Request) (*api.BackupInspectResponse, error)
+	InspectBackup(req *api.BackupInspectRequest) (*api.BackupInspectResponse, error)
 
 	// DeleteBackup deletes backup
-	DeleteBackup(req *Request) (*api.BackupDeleteResponse, error)
+	DeleteBackup(req *api.BackupDeleteRequest) (*api.BackupDeleteResponse, error)
 }
 
 var backupDrivers = make(map[string]Driver)

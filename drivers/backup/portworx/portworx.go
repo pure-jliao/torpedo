@@ -13,12 +13,6 @@ import (
 	"github.com/portworx/torpedo/drivers/volume/portworx/schedops"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	// import ssh to invoke init
-	//_ "github.com/portworx/torpedo/drivers/node/ssh"
-	// import scheduler k8s
-	//_ "github.com/portworx/torpedo/drivers/scheduler/k8s"
-	// import portworx volume
-	//_ "github.com/portworx/torpedo/drivers/volume/portworx"
 )
 
 const (
@@ -207,141 +201,12 @@ func (p *portworx) getSchedulePolicyManager() api.SchedulePolicyClient {
 	return p.schedulePolicyManager
 }
 
-func (p *portworx) getOrgID(params *backup.Request) string {
-	if params != nil && params.OrgID != "" {
-		return params.OrgID
-	}
-	return ""
-}
-
-func (p *portworx) getCloudCredentialName(params *backup.Request) string {
-	if params != nil && params.CloudCredentialName != "" {
-		return params.CloudCredentialName
-	}
-	return ""
-}
-
-func (p *portworx) getBackupLocationName(params *backup.Request) string {
-	if params != nil && params.BackupLocationName != "" {
-		return params.BackupLocationName
-	}
-	return ""
-}
-
-func (p *portworx) getClusterName(params *backup.Request) string {
-	if params != nil && params.ClusterName != "" {
-		return params.ClusterName
-	}
-	return ""
-}
-
-func (p *portworx) getBackupName(params *backup.Request) string {
-	if params != nil && params.BackupName != "" {
-		return params.BackupName
-	}
-	return ""
-}
-
-func (p *portworx) getNameSpaces(params *backup.Request) []string {
-	return params.NameSpaces
-}
-
-func (p *portworx) getLabels(params *backup.Request) map[string]string {
-	return params.Labels
-}
-
-func (p *portworx) getToken(params *backup.Request) string {
-	if params != nil && params.Token != "" {
-		return params.Token
-	}
-	return ""
-}
-
-func (p *portworx) getKubeconfig(params *backup.Request) string {
-	if params != nil && params.Kubeconfig != "" {
-		return params.Kubeconfig
-	}
-	return ""
-}
-
-func (p *portworx) getBackupLocationPath(params *backup.Request) string {
-	if params != nil && params.BackupLocationPath != "" {
-		return params.BackupLocationPath
-	}
-	return ""
-}
-
-func (p *portworx) getEncKey(params *backup.Request) string {
-	if params != nil && params.EncKey != "" {
-		return params.EncKey
-	}
-	return ""
-}
-
-func (p *portworx) getProvider(params *backup.Request) string {
-	if params != nil && params.Provider != "" {
-		return params.Provider
-	}
-	return ""
-}
-
-func (p *portworx) getS3Endpoint(params *backup.Request) string {
-	if params != nil && params.S3Endpoint != "" {
-		return params.S3Endpoint
-	}
-	return ""
-}
-
-func (p *portworx) getS3Region(params *backup.Request) string {
-	if params != nil && params.S3Region != "" {
-		return params.S3Region
-	}
-	return ""
-}
-
-func (p *portworx) getOwner(params *backup.Request) string {
-	if params != nil && params.Owner != "" {
-		return params.Owner
-	}
-	return ""
-}
-
-func (p *portworx) getDisableSsl(params *backup.Request) bool {
-	if params != nil {
-		return params.DisableSsl
-	}
-	return true
-}
-
-func (p *portworx) getDisablePathStyle(params *backup.Request) bool {
-	if params != nil {
-		return params.DisablePathStyle
-	}
-	return true
-}
-
-func (p *portworx) getAccessKey(params *backup.Request) string {
-	if params != nil && params.AccessKey != "" {
-		return params.AccessKey
-	}
-	return ""
-}
-
-func (p *portworx) getSecretKey(params *backup.Request) string {
-	if params != nil && params.SecretKey != "" {
-		return params.SecretKey
-	}
-	return ""
-}
-
-func (p *portworx) CreateOrganization(params *backup.Request) (*api.OrganizationCreateResponse, error) {
+func (p *portworx) CreateOrganization(req *api.OrganizationCreateRequest) (*api.OrganizationCreateResponse, error) {
 	org := p.getOrganizationManager()
-	req := &api.OrganizationCreateRequest{
-		CreateMetadata: &api.CreateMetadata{
-			Name: p.getOrgID(params),
-		},
+	if req != nil {
+		return org.Create(context.Background(), req)
 	}
-	return org.Create(context.Background(), req)
+	return nil, fmt.Errorf("Request is nil")
 }
 
 func (p *portworx) EnumerateOrganization() (*api.OrganizationEnumerateResponse, error) {
@@ -351,219 +216,132 @@ func (p *portworx) EnumerateOrganization() (*api.OrganizationEnumerateResponse, 
 	return org.Enumerate(context.Background(), req)
 }
 
-func (p *portworx) CreateCloudCredential(params *backup.Request) (*api.CloudCredentialCreateResponse, error) {
+func (p *portworx) CreateCloudCredential(req *api.CloudCredentialCreateRequest) (*api.CloudCredentialCreateResponse, error) {
 	cc := p.getCloudCredentialManager()
-	req := &api.CloudCredentialCreateRequest{
-		CreateMetadata: &api.CreateMetadata{
-			Name:  p.getCloudCredentialName(params),
-			OrgId: p.getOrgID(params),
-		},
-		CloudCredential: &api.CloudCredentialInfo{},
+	if req != nil {
+		return cc.Create(context.Background(), req)
 	}
-
-	req.CloudCredential.Type = api.CloudCredentialInfo_AWS
-	req.CloudCredential.Config = &api.CloudCredentialInfo_AwsConfig{
-		AwsConfig: &api.AWSConfig{
-			AccessKey: p.getAccessKey(params),
-			SecretKey: p.getSecretKey(params),
-		},
-	}
-	return cc.Create(context.Background(), req)
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) InspectCloudCredential(params *backup.Request) (*api.CloudCredentialInspectResponse, error) {
+func (p *portworx) InspectCloudCredential(req *api.CloudCredentialInspectRequest) (*api.CloudCredentialInspectResponse, error) {
 	cc := p.getCloudCredentialManager()
-	resp, err := cc.Inspect(
-		context.Background(),
-		&api.CloudCredentialInspectRequest{
-			Name:  p.getCloudCredentialName(params),
-			OrgId: p.getOrgID(params),
-		},
-	)
-	return resp, err
+	if req != nil {
+		return cc.Inspect(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) EnumerateCloudCredential(params *backup.Request) (*api.CloudCredentialEnumerateResponse, error) {
+func (p *portworx) EnumerateCloudCredential(req *api.CloudCredentialEnumerateRequest) (*api.CloudCredentialEnumerateResponse, error) {
 	cc := p.getCloudCredentialManager()
-	resp, err := cc.Enumerate(
-		context.Background(),
-		&api.CloudCredentialEnumerateRequest{OrgId: p.getOrgID(params)},
-	)
-	return resp, err
+	if req != nil {
+		cc.Enumerate(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) DeleteCloudCredential(params *backup.Request) (*api.CloudCredentialDeleteResponse, error) {
+func (p *portworx) DeleteCloudCredential(req *api.CloudCredentialDeleteRequest) (*api.CloudCredentialDeleteResponse, error) {
 	cc := p.getCloudCredentialManager()
-	req := &api.CloudCredentialDeleteRequest{
-		Name:  p.getCloudCredentialName(params),
-		OrgId: p.getOrgID(params),
+	if req != nil {
+		return cc.Delete(context.Background(), req)
 	}
-	return cc.Delete(context.Background(), req)
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) CreateCluster(params *backup.Request) (*api.ClusterCreateResponse, error) {
+func (p *portworx) CreateCluster(req *api.ClusterCreateRequest) (*api.ClusterCreateResponse, error) {
 	cluster := p.getClusterManager()
-	req := &api.ClusterCreateRequest{
-		CreateMetadata: &api.CreateMetadata{
-			Name:   p.getClusterName(params),
-			OrgId:  p.getOrgID(params),
-			Labels: p.getLabels(params),
-		},
-		Cluster: &api.ClusterInfo{
-			PxConfig: &api.PXConfig{
-				AccessToken: p.getToken(params),
-			},
-			Kubeconfig:      p.getKubeconfig(params),
-			CloudCredential: p.getCloudCredentialName(params),
-		},
+	if req != nil {
+		return cluster.Create(context.Background(), req)
 	}
-	return cluster.Create(context.Background(), req)
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) InspectCluster(params *backup.Request) (*api.ClusterInspectResponse, error) {
+func (p *portworx) InspectCluster(req *api.ClusterInspectRequest) (*api.ClusterInspectResponse, error) {
 	cluster := p.getClusterManager()
-	return cluster.Inspect(
-		context.Background(),
-		&api.ClusterInspectRequest{
-			OrgId: p.getOrgID(params),
-			Name:  p.getClusterName(params),
-		},
-	)
+	if req != nil {
+		return cluster.Inspect(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) EnumerateCluster(params *backup.Request) (*api.ClusterEnumerateResponse, error) {
+func (p *portworx) EnumerateCluster(req *api.ClusterEnumerateRequest) (*api.ClusterEnumerateResponse, error) {
 	cluster := p.getClusterManager()
-	return cluster.Enumerate(
-		context.Background(),
-		&api.ClusterEnumerateRequest{OrgId: p.getOrgID(params)},
-	)
+	if req != nil {
+		return cluster.Enumerate(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) DeleteCluster(params *backup.Request) (*api.ClusterDeleteResponse, error) {
+func (p *portworx) DeleteCluster(req *api.ClusterDeleteRequest) (*api.ClusterDeleteResponse, error) {
 	cluster := p.getClusterManager()
-	return cluster.Delete(
-		context.Background(),
-		&api.ClusterDeleteRequest{
-			OrgId: p.getOrgID(params),
-			Name:  p.getClusterName(params),
-		},
-	)
-}
-
-func (p *portworx) CreateBackupLocation(params *backup.Request) (*api.BackupLocationCreateResponse, error) {
-	bl := p.getBackupLocationManager()
-	req := &api.BackupLocationCreateRequest{
-		CreateMetadata: &api.CreateMetadata{
-			Name:  p.getBackupLocationName(params),
-			OrgId: p.getOrgID(params),
-		},
-		BackupLocation: &api.BackupLocationInfo{
-			Path:          p.getBackupLocationPath(params),
-			EncryptionKey: p.getEncKey(params),
-		},
+	if req != nil {
+		return cluster.Delete(context.Background(), req)
 	}
+	return nil, fmt.Errorf("Request is nil")
+}
 
-	switch p.getProvider(params) {
-	case "s3":
-		req.BackupLocation.Config = &api.BackupLocationInfo_S3Config{
-			S3Config: &api.S3Config{
-				Endpoint:         p.getS3Endpoint(params),
-				Region:           p.getS3Region(params),
-				DisableSsl:       p.getDisableSsl(params),
-				DisablePathStyle: p.getDisablePathStyle(params),
-			},
-		}
-		req.BackupLocation.Type = api.BackupLocationInfo_S3
-	case "azure":
-		req.BackupLocation.Type = api.BackupLocationInfo_Azure
-	case "google":
-		req.BackupLocation.Type = api.BackupLocationInfo_Google
-	default:
-		logrus.Errorf("provider needs to be either azure, google or s3")
+func (p *portworx) CreateBackupLocation(req *api.BackupLocationCreateRequest) (*api.BackupLocationCreateResponse, error) {
+	bl := p.getBackupLocationManager()
+	if req != nil {
+		return bl.Create(context.Background(), req)
 	}
-	req.BackupLocation.CloudCredential = p.getCloudCredentialName(params)
-	return bl.Create(context.Background(), req)
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) EnumerateBackupLocation(params *backup.Request) (*api.BackupLocationEnumerateResponse, error) {
+func (p *portworx) EnumerateBackupLocation(req *api.BackupLocationEnumerateRequest) (*api.BackupLocationEnumerateResponse, error) {
 	bl := p.getBackupLocationManager()
-	return bl.Enumerate(
-		context.Background(),
-		&api.BackupLocationEnumerateRequest{
-			OrgId: p.getOrgID(params),
-		},
-	)
-}
-
-func (p *portworx) InspectBackupLocation(params *backup.Request) (*api.BackupLocationInspectResponse, error) {
-	bl := p.getBackupLocationManager()
-	return bl.Inspect(
-		context.Background(),
-		&api.BackupLocationInspectRequest{
-			Name:  p.getBackupLocationName(params),
-			OrgId: p.getOrgID(params),
-		},
-	)
-}
-
-func (p *portworx) DeleteBackupLocation(params *backup.Request) (*api.BackupLocationDeleteResponse, error) {
-	bl := p.getBackupLocationManager()
-	return bl.Delete(
-		context.Background(),
-		&api.BackupLocationDeleteRequest{
-			Name:  p.getBackupLocationName(params),
-			OrgId: p.getOrgID(params),
-		},
-	)
-}
-
-func (p *portworx) CreateBackup(params *backup.Request) (*api.BackupCreateResponse, error) {
-	backup := p.getBackupManager()
-	req := &api.BackupCreateRequest{
-		CreateMetadata: &api.CreateMetadata{
-			Name:   p.getBackupName(params),
-			OrgId:  p.getOrgID(params),
-			Owner:  p.getOwner(params),
-			Labels: p.getLabels(params),
-		},
-		BackupLocation: p.getBackupLocationName(params),
-		Cluster:        p.getClusterName(params),
-		Namespaces:     p.getNameSpaces(params),
+	if req != nil {
+		return bl.Enumerate(context.Background(), req)
 	}
-
-	return backup.Create(context.Background(), req)
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) EnumerateBackup(params *backup.Request) (*api.BackupEnumerateResponse, error) {
-	backup := p.getBackupManager()
-	return backup.Enumerate(
-		context.Background(),
-		&api.BackupEnumerateRequest{
-			OrgId: p.getOrgID(params),
-		},
-	)
+func (p *portworx) InspectBackupLocation(req *api.BackupLocationInspectRequest) (*api.BackupLocationInspectResponse, error) {
+	bl := p.getBackupLocationManager()
+	if req != nil {
+		return bl.Inspect(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) InspectBackup(params *backup.Request) (*api.BackupInspectResponse, error) {
-	backup := p.getBackupManager()
-	return backup.Inspect(
-		context.Background(),
-		&api.BackupInspectRequest{
-			OrgId: p.getOrgID(params),
-			Name:  p.getBackupName(params),
-		},
-	)
+func (p *portworx) DeleteBackupLocation(req *api.BackupLocationDeleteRequest) (*api.BackupLocationDeleteResponse, error) {
+	bl := p.getBackupLocationManager()
+	if req != nil {
+		return bl.Delete(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
 }
 
-func (p *portworx) DeleteBackup(params *backup.Request) (*api.BackupDeleteResponse, error) {
+func (p *portworx) CreateBackup(req *api.BackupCreateRequest) (*api.BackupCreateResponse, error) {
 	backup := p.getBackupManager()
-	return backup.Delete(
-		context.Background(),
-		&api.BackupDeleteRequest{
-			OrgId: p.getOrgID(params),
-			Name:  p.getBackupName(params),
-		},
-	)
+	if req != nil {
+		return backup.Create(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
+}
+
+func (p *portworx) EnumerateBackup(req *api.BackupEnumerateRequest) (*api.BackupEnumerateResponse, error) {
+	backup := p.getBackupManager()
+	if req != nil {
+		return backup.Enumerate(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
+}
+
+func (p *portworx) InspectBackup(req *api.BackupInspectRequest) (*api.BackupInspectResponse, error) {
+	backup := p.getBackupManager()
+	if req != nil {
+		return backup.Inspect(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
+}
+
+func (p *portworx) DeleteBackup(req *api.BackupDeleteRequest) (*api.BackupDeleteResponse, error) {
+	backup := p.getBackupManager()
+	if req != nil {
+		return backup.Delete(context.Background(), req)
+	}
+	return nil, fmt.Errorf("Request is nil")
 }
 
 func init() {
