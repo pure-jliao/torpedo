@@ -627,6 +627,7 @@ func ParseFlags() {
 			if backupDriver, err = backup.Get(backupDriverName); err != nil {
 				logrus.Fatal("cannot find backup driver for %v. Err: %v\n", backupDriverName, err)
 			}
+			logrus.Infof("BackupDriver Name %v", backupDriver.String())
 		}
 		once.Do(func() {
 			instance = &Torpedo{
