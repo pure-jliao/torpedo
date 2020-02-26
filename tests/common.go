@@ -103,8 +103,12 @@ var (
 
 // InitInstance is the ginkgo spec for initializing torpedo
 func InitInstance() {
+	fmt.Printf("===== Inside InitInstance()=========")
 	var err error
 	var token string
+	if Inst() == nil {
+		fmt.Printf("=========Inst() is nil in InitInstance()===========")
+	}
 	if Inst().ConfigMap != "" {
 		logrus.Infof("Using Config Map: %s ", Inst().ConfigMap)
 		token, err = Inst().S.GetTokenFromConfigMap(Inst().ConfigMap)
@@ -114,6 +118,7 @@ func InitInstance() {
 		token = ""
 	}
 
+	fmt.Printf("==============Going to Init Schedule===============")
 	err = Inst().S.Init(scheduler.InitOptions{
 		SpecDir:             Inst().SpecDir,
 		VolDriverName:       Inst().V.String(),
@@ -623,12 +628,15 @@ func ParseFlags() {
 			}
 			logrus.Infof("Parsed custom app config file: %+v", customAppConfig)
 		}
+		logrus.Infof("==========GOING TO INITIALIZE BACKUP DRIVER : %s ==========", backupDriverName )
 		if backupDriverName != "" {
 			if backupDriver, err = backup.Get(backupDriverName); err != nil {
 				logrus.Fatal("cannot find backup driver for %v. Err: %v\n", backupDriverName, err)
 			}
+			logrus.Infof("BackupDriver Name %v", backupDriver.String())
 		}
 		once.Do(func() {
+			logrus.Info("===============Initializing TP Instance===========")
 			instance = &Torpedo{
 				InstanceID:                          time.Now().Format("01-02-15h04m05s"),
 				S:                                   schedulerDriver,

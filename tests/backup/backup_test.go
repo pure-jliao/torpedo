@@ -9,7 +9,6 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
 	api "github.com/portworx/px-backup-api/pkg/apis/v1"
-	"github.com/portworx/torpedo/drivers/scheduler"
 	. "github.com/portworx/torpedo/tests"
 )
 
@@ -30,23 +29,13 @@ func TestBackup(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
+        fmt.Printf("======== In Before Suite: Going to InitInstance()========")
 	InitInstance()
+	fmt.Printf("======== In Before Suite: Completed InitInstance()========")
 })
 
 // This test performs basic test of starting an application and destroying it (along with storage)
 var _ = Describe("{BackupSetup}", func() {
-	var contexts []*scheduler.Context
-
-	It("has to validate that backup completes even after killing storage driver", func() {
-		Step("Deploy applications", func() {
-			contexts = make([]*scheduler.Context, 0)
-
-			for i := 0; i < Inst().ScaleFactor; i++ {
-				contexts = append(contexts, ScheduleApplications(fmt.Sprintf("simplebackup-%d", i))...)
-
-			}
-			ValidateApplications(contexts)
-		})
 
 		CreateOrganization(orgID)
 
@@ -55,7 +44,6 @@ var _ = Describe("{BackupSetup}", func() {
 		CreateBackupLocation(BLocationName, orgID, CredName)
 
 		CreateCluster(ClusterName, orgID, CredName)
-	})
 })
 
 var _ = AfterSuite(func() {
@@ -66,7 +54,14 @@ var _ = AfterSuite(func() {
 func CreateOrganization(name string) {
 
 	Step(fmt.Sprintf("Create organization [%s]", name), func() {
+		
+		if Inst() == nil {
+			fmt.Printf("=========Inst is NIL ===========")
+		}
+		fmt.Printf("=======OUTSIDE NIL CHECK NOW =========")
 		backupDriver := Inst().Backup
+		Expect(backupDriver).NotTo(BeNil())
+		//logrus.Infof("backup driver name :%v", Inst().Backup.String())
 		metadata := &api.CreateMetadata{
 			Name: name,
 		}
