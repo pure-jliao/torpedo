@@ -15,6 +15,13 @@ import (
 	. "github.com/portworx/torpedo/tests"
 )
 
+const (
+	orgID         = "simpleBackupOrg"
+	BLocationName = "simpleBLocation"
+	ClusterName   = "simpleBackupCluster"
+	CredName      = "simpleBackupCred"
+)
+
 func TestBasic(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -31,7 +38,7 @@ var _ = BeforeSuite(func() {
 // This test performs basic test of starting an application and destroying it (along with storage)
 var _ = Describe("{SetupTeardown}", func() {
 	var contexts []*scheduler.Context
-
+	CreateOrganization(orgID)
 	It("has to setup, validate and teardown apps", func() {
 		contexts = make([]*scheduler.Context, 0)
 

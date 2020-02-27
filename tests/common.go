@@ -13,6 +13,7 @@ import (
 	"github.com/libopenstorage/openstorage/pkg/sched"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	api "github.com/portworx/px-backup-api/pkg/apis/v1"
 	"github.com/portworx/sched-ops/task"
 	"github.com/portworx/torpedo/drivers/node"
 	"github.com/sirupsen/logrus"
@@ -109,6 +110,8 @@ var (
 func InitInstance() {
 	var err error
 	var token string
+	logrus.Infof("===== Inside InitInstance() : %v=", Inst())
+	logrus.Infof("===== Inside InitInstance().Backup : %v=", Inst().Backup)
 	if Inst().ConfigMap != "" {
 		logrus.Infof("Using Config Map: %s ", Inst().ConfigMap)
 		token, err = Inst().S.GetTokenFromConfigMap(Inst().ConfigMap)
@@ -156,6 +159,30 @@ func ValidateCleanup() {
 			CollectSupport()
 		}
 		expect(err).NotTo(haveOccurred())
+	})
+}
+
+func CreateOrganization(name string) {
+	ginkgo.Describe(fmt.Sprintf("For test"), func() {
+		Step(fmt.Sprintf("Create org [%s]", name), func() {
+
+			if Inst() == nil {
+				fmt.Printf("=========Inst is NIL ===========")
+			}
+			fmt.Printf("=======OUTSIDE NIL CHECK NOW =========")
+			backupDriver := Inst().Backup
+			expect(backupDriver).NotTo(beNil())
+			//logrus.Infof("backup driver name :%v", Inst().Backup.String())
+			metadata := &api.CreateMetadata{
+				Name: name,
+			}
+			createOrgRequest := &api.OrganizationCreateRequest{
+				CreateMetadata: metadata,
+			}
+			_, err := backupDriver.CreateOrganization(createOrgRequest)
+			expect(err).NotTo(haveOccurred())
+			// TODO: validate createOrgResponse also
+		})
 	})
 }
 
