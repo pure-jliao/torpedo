@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
@@ -38,6 +39,10 @@ var _ = Describe("{UpgradeVolumeDriver}", func() {
 		}
 
 		ValidateApplications(contexts)
+
+		Step(fmt.Sprintf("wait 10 minutes for the volumes to fill up a little "), func() {
+			time.Sleep(10 * time.Minute)
+		})
 
 		Step("start the upgrade of volume driver", func() {
 			err := Inst().V.UpgradeDriver(Inst().StorageDriverUpgradeEndpointURL,
