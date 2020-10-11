@@ -71,11 +71,13 @@ func NewFactory(specDir, storageProvisioner string, parser Parser) (*Factory, er
 	}
 
 	for _, file := range appDirList {
+
 		if file.IsDir() {
 
 			specID := file.Name()
 
 			specToParse := path.Join(f.specDir, specID)
+
 			logrus.Infof("Parsing: %v...", path.Join(f.specDir, specID))
 			logrus.Infof("Storage provisioner %s", storageProvisioner)
 			specs, err := f.specParser.ParseSpecs(specToParse, storageProvisioner)
