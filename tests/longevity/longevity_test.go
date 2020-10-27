@@ -63,6 +63,7 @@ var _ = Describe("{Longevity}", func() {
 		HADecrease:       TriggerHADecrease,
 		EmailReporter:    TriggerEmailReporter,
 		AppTaskDown:      TriggerAppTaskDown,
+		AppScaleUpDown:   TriggerAppScaleUpDown,
 	}
 	It("has to schedule app and introduce test triggers", func() {
 		Step(fmt.Sprintf("Start watch on K8S configMap [%s/%s]",
@@ -199,6 +200,7 @@ func populateDisruptiveTriggers() {
 		RebootNode:       true,
 		EmailReporter:    false,
 		AppTaskDown:      false,
+		AppScaleUpDown:   false,
 	}
 }
 
@@ -264,8 +266,16 @@ func populateIntervals() {
 	triggerInterval[HADecrease] = map[int]time.Duration{}
 	triggerInterval[EmailReporter] = map[int]time.Duration{}
 	triggerInterval[AppTaskDown] = map[int]time.Duration{}
+	triggerInterval[AppScaleUpDown] = map[int]time.Duration{}
 
 	baseInterval := 10 * time.Minute
+	triggerInterval[AppScaleUpDown][10] = 1 * baseInterval
+	triggerInterval[AppScaleUpDown][9] = 2 * baseInterval
+	triggerInterval[AppScaleUpDown][8] = 3 * baseInterval
+	triggerInterval[AppScaleUpDown][7] = 4 * baseInterval
+	triggerInterval[AppScaleUpDown][6] = 5 * baseInterval
+	triggerInterval[AppScaleUpDown][5] = 6 * baseInterval // Default global chaos level, 3 hrs
+
 	triggerInterval[RebootNode][10] = 1 * baseInterval
 	triggerInterval[RebootNode][9] = 2 * baseInterval
 	triggerInterval[RebootNode][8] = 3 * baseInterval
@@ -335,6 +345,7 @@ func populateIntervals() {
 	triggerInterval[HADecrease][0] = 0
 	triggerInterval[RestartVolDriver][0] = 0
 	triggerInterval[AppTaskDown][0] = 0
+	triggerInterval[AppScaleUpDown][0] = 0
 }
 
 func isTriggerEnabled(triggerType string) (time.Duration, bool) {

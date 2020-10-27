@@ -37,6 +37,7 @@ const (
 const (
 	validateReplicationUpdateTimeout = 2 * time.Hour
 	errorChannelSize                 = 10
+	appScaleUpDownStabilizationTime  = 30 * time.Second
 )
 
 // EmailRecipients list of email IDs to send email to
@@ -91,6 +92,8 @@ const (
 	HADecrease = "haDecrease"
 	// AppTaskDown deletes application task for all contexts
 	AppTaskDown = "appTaskDown"
+	// AppScaleUpDown scales
+	AppScaleUpDown = "appScaleUpDown"
 	// RestartVolDriver restart volume driver
 	RestartVolDriver = "restartVolDriver"
 	// CrashVolDriver crashes volume driver
@@ -100,6 +103,64 @@ const (
 	// EmailReporter notifies via email outcome of past events
 	EmailReporter = "emailReporter"
 )
+
+// TriggerAppScaleUpDown peforms repl-add on all volumes of given contexts
+func TriggerAppScaleUpDown(contexts []*scheduler.Context, recordChan *chan *EventRecord) {
+	defer ginkgo.GinkgoRecover()
+	event := &EventRecord{
+		Event: Event{
+			ID:   GenerateUUID(),
+			Type: AppScaleUpDown,
+		},
+		Start:   time.Now().Format(time.RFC1123),
+		Outcome: []error{},
+	}
+
+	defer func() {
+		event.End = time.Now().Format(time.RFC1123)
+		*recordChan <- event
+	}()
+
+	Step("Scale up and down all app", func() {
+		for _, ctx := range contexts {
+			Step(fmt.Sprintf("scale up app: %s by %d ", ctx.App.Key, len(node.GetWorkerNodes())), func() {
+				applicationScaleUpMap, err := Inst().S.GetScaleFactorMap(ctx)
+				logrus.Infof("====applicationScaleUpMap before update: %+v========\n", applicationScaleUpMap)
+				expect(err).NotTo(haveOccurred())
+				for name := range applicationScaleUpMap {
+					applicationScaleUpMap[name] = int32(len(node.GetWorkerNodes()))
+				}
+				logrus.Infof("====applicationScaleUpMap after update: %+v========\n", applicationScaleUpMap)
+				err = Inst().S.ScaleApplication(ctx, applicationScaleUpMap)
+				expect(err).NotTo(haveOccurred())
+			})
+
+			Step("Giving few seconds for scaled up applications to stabilize", func() {
+				time.Sleep(appScaleUpDownStabilizationTime)
+			})
+
+			ValidateContext(ctx)
+
+			Step(fmt.Sprintf("scale down app %s", ctx.App.Key), func() {
+				applicationScaleDownMap, err := Inst().S.GetScaleFactorMap(ctx)
+				expect(err).NotTo(haveOccurred())
+				for name := range applicationScaleDownMap {
+					applicationScaleDownMap[name] = 3
+				}
+				logrus.Infof("====applicationScaleDownMap: %+v========\n", applicationScaleDownMap)
+				err = Inst().S.ScaleApplication(ctx, applicationScaleDownMap)
+				expect(err).NotTo(haveOccurred())
+			})
+
+			Step("Giving few seconds for scaled down applications to stabilize", func() {
+				time.Sleep(appScaleUpDownStabilizationTime)
+			})
+
+			ValidateContext(ctx)
+		}
+	})
+
+}
 
 // TriggerHAIncrease peforms repl-add on all volumes of given contexts
 func TriggerHAIncrease(contexts []*scheduler.Context, recordChan *chan *EventRecord) {
