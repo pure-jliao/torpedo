@@ -127,6 +127,7 @@ type portworx struct {
 	csbackupManager      api.OpenStorageCloudBackupClient
 	schedOps             schedops.Driver
 	nodeDriver           node.Driver
+	restClient           *client.Client
 	refreshEndpoint      bool
 	token                string
 }
@@ -514,6 +515,21 @@ func (d *portworx) RecoverDriver(n node.Node) error {
 	}
 
 	return nil
+}
+
+func (d *portworx) ListCloudDrives() ([]*provider.DriveSets, error) {
+
+}
+
+// listdrives, nil
+// transferdrives, params[map]string
+func (d *portworx) cloudDrive(op string, params map[string]string) *client.Response {
+	req := d.restClient.Get().Resource(op)
+	for k, v := range params {
+		req.QueryOption(k, v)
+	}
+	return req.Do()
+	//return resp.Error()
 }
 
 func (d *portworx) ValidateCreateVolume(volumeName string, params map[string]string) error {
