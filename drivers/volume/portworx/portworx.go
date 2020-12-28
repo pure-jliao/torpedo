@@ -49,6 +49,7 @@ const (
 const (
 	// DriverName is the name of the portworx driver implementation
 	DriverName                  = "pxd"
+	pxdRestPort                 = 9001
 	pxDiagPath                  = "/remotediags"
 	pxVersionLabel              = "PX Version"
 	enterMaintenancePath        = "/entermaintenance"
@@ -517,19 +518,45 @@ func (d *portworx) RecoverDriver(n node.Node) error {
 	return nil
 }
 
-func (d *portworx) ListCloudDrives() ([]*provider.DriveSets, error) {
-
+func (d *portworx) ListCloudDrives() error {
+	resp := d.cloudDriveOps("listdrives", nil)
+	body, err := resp.Body()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%+v", body)
+	return nil
 }
 
 // listdrives, nil
 // transferdrives, params[map]string
-func (d *portworx) cloudDrive(op string, params map[string]string) *client.Response {
-	req := d.restClient.Get().Resource(op)
+func (d *portworx) cloudDriveOps(op string, params map[string]string, n node.Node) (*client.Response, error) {
+
+	pxdRestPort, err := getRestPort()
+	if err != nil {
+		return nil, err
+	}
+	endpoint, err := d.schedOps.GetServiceEndpoint()
+	var url string
+	if err != nil {
+		logrus.Warnf("unable to get service endpoint falling back to node addr %v", err)
+		pxdRestPort, err = getRestContainerPort()
+		if err != nil {
+			return nil, err
+		}
+		url = fmt.Sprintf("http://%s:%d", n.Addresses[0], pxdRestPort)
+	} else {
+		url = fmt.Sprintf("http://%s:%d", endpoint, pxdRestPort)
+	}
+	c, err := client.NewClient(url, "", "")
+	if err != nil {
+		return nil, err
+	}
+	req := c.Get().Resource(op)
 	for k, v := range params {
 		req.QueryOption(k, v)
 	}
-	return req.Do()
-	//return resp.Error()
+	return req.Do(), nil
 }
 
 func (d *portworx) ValidateCreateVolume(volumeName string, params map[string]string) error {
@@ -1474,9 +1501,22 @@ func (d *portworx) testAndSetEndpoint(endpoint string, sdkport, apiport int32) e
 	} else {
 		return err
 	}
+	pxRestEndpoint := d.constructURL(endpoint)
+	// Required for clouddrive api calls
+	restClient, err := client.NewClient(pxRestEndpoint, "", "")
+	if err != nil {
+		fmt.Printf("====Error while geting rest endpoint: %v=======\n", err)
+		return err
+	}
+	d.restClient = restClient
 	logrus.Infof("Using %v as endpoint for portworx volume driver", pxEndpoint)
 
 	return nil
+}
+
+func (d *portworx) constructURL(ip string) string {
+	restPort, err := getRestContainerPort()
+	return fmt.Sprintf("http://%s:%d", ip, restPort)
 }
 
 func (d *portworx) getLegacyClusterManager(endpoint string, pxdRestPort int32) (cluster.Cluster, error) {

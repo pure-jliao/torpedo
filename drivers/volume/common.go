@@ -332,3 +332,11 @@ func (d *DefaultDriver) RestartDriver(n node.Node, triggerOpts *driver_api.Trigg
 		Operation: "RestartDriver()",
 	}
 }
+
+// ListCloudDrives must cause the volume driver to restart on a given node.
+func (d *DefaultDriver) ListCloudDrives(n node.Node) error {
+	return &errors.ErrNotSupported{
+		Type:      "Function",
+		Operation: "ListCloudDrives()",
+	}
+}

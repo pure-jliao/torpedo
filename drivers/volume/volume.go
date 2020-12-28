@@ -165,7 +165,7 @@ type Driver interface {
 	EstimateVolumeExpand(apRule apapi.AutopilotRule, initialSize, workloadSize uint64) (uint64, int, error)
 
 	// ListCloudDrives enumarates all the clouddrives in the cluster
-	ListCloudDrives() ([]*provider.DriveSets, error)
+	ListCloudDrives(n node.Node) error
 }
 
 // StorageProvisionerType provisioner to be used for torpedo volumes
