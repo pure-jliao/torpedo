@@ -34,6 +34,8 @@ import (
 	_ "github.com/portworx/torpedo/drivers/node/aws"
 	// import gke driver to invoke it's init
 	_ "github.com/portworx/torpedo/drivers/node/gke"
+	// import vsphere driver to invoke it's init
+	_ "github.com/portworx/torpedo/drivers/node/vsphere"
 
 	// import ssh driver to invoke it's init
 	_ "github.com/portworx/torpedo/drivers/node/ssh"
@@ -56,6 +58,8 @@ import (
 	_ "github.com/portworx/torpedo/drivers/volume/aws"
 	// import azure driver to invoke it's init
 	_ "github.com/portworx/torpedo/drivers/volume/azure"
+	// import generic csi driver to invoke it's init
+	_ "github.com/portworx/torpedo/drivers/volume/generic_csi"
 	"github.com/portworx/torpedo/pkg/log"
 
 	yaml "gopkg.in/yaml.v2"
@@ -88,6 +92,7 @@ const (
 	helmValuesConfigMapFlag              = "helmvalues-configmap"
 	enableStorkUpgradeFlag               = "enable-stork-upgrade"
 	autopilotUpgradeImageCliFlag         = "autopilot-upgrade-version"
+	csiGenericDriverConfigMapFlag        = "csi-generic-driver-config-map"
 )
 
 const (
@@ -157,7 +162,7 @@ func InitInstance() {
 	err = Inst().N.Init()
 	expect(err).NotTo(haveOccurred())
 
-	err = Inst().V.Init(Inst().S.String(), Inst().N.String(), token, Inst().Provisioner)
+	err = Inst().V.Init(Inst().S.String(), Inst().N.String(), token, Inst().Provisioner, Inst().CsiGenericDriverConfigMap)
 	expect(err).NotTo(haveOccurred())
 
 	if Inst().Backup != nil {
@@ -214,10 +219,9 @@ func ValidateContext(ctx *scheduler.Context, errChan ...*chan error) {
 		}
 
 		Step(fmt.Sprintf("validate %s app's volumes", ctx.App.Key), func() {
-			if ctx.SkipVolumeValidation {
-				return
+			if !ctx.SkipVolumeValidation {
+				ValidateVolumes(ctx, errChan...)
 			}
-			ValidateVolumes(ctx, errChan...)
 		})
 
 		Step(fmt.Sprintf("wait for %s app to start running", ctx.App.Key), func() {
@@ -356,22 +360,44 @@ func ValidateRestoredApplications(contexts []*scheduler.Context, volumeParameter
 }
 
 // TearDownContext is the ginkgo spec for tearing down a scheduled context
+// In the tear down flow we first want to delete volumes, then applications and only then we want to delete StorageClasses
+// StorageClass has to be deleted last because it has information that is required for when deleting PVC, if StorageClass objects are deleted before
+// deleting PVCs, especially with CSI + Auth enabled, PVC deletion will fail as Auth params are stored inside StorageClass objects
 func TearDownContext(ctx *scheduler.Context, opts map[string]bool) {
 	context("For tearing down of an app context", func() {
 		var err error
+		var originalSkipClusterScopedObjects bool
 
+		if opts != nil {
+			// Save original value of SkipClusterScopedObjects, if it exists
+			originalSkipClusterScopedObjects = opts[SkipClusterScopedObjects]
+		} else {
+			opts = make(map[string]bool) // If opts was passed as nil make it
+		}
+
+		opts[SkipClusterScopedObjects] = true // Skip tearing down cluster scope objects
 		options := mapToVolumeOptions(opts)
+
+		// Tear down storage objects
 		vols := DeleteVolumes(ctx, options)
 
+		// Tear down application
 		Step(fmt.Sprintf("start destroying %s app", ctx.App.Key), func() {
 			err = Inst().S.Destroy(ctx, opts)
 			expect(err).NotTo(haveOccurred())
 		})
 
-		if ctx.SkipVolumeValidation {
-			return
+		if !ctx.SkipVolumeValidation {
+			ValidateVolumesDeleted(ctx.App.Key, vols)
 		}
-		ValidateVolumesDeleted(ctx.App.Key, vols)
+
+		// Delete Cluster Scope objects
+		if !originalSkipClusterScopedObjects {
+			opts[SkipClusterScopedObjects] = false // Tearing down cluster scope objects
+			options := mapToVolumeOptions(opts)
+			DeleteVolumes(ctx, options)
+		}
+
 	})
 }
 
@@ -879,6 +905,7 @@ type Torpedo struct {
 	VaultToken                          string
 	SchedUpgradeHops                    string
 	AutopilotUpgradeImage               string
+	CsiGenericDriverConfigMap           string
 }
 
 // ParseFlags parses command line flags
@@ -907,6 +934,7 @@ func ParseFlags() {
 	var vaultToken string
 	var schedUpgradeHops string
 	var autopilotUpgradeImage string
+	var csiGenericDriverConfigMapName string
 
 	flag.StringVar(&s, schedulerCliFlag, defaultScheduler, "Name of the scheduler to use")
 	flag.StringVar(&n, nodeDriverCliFlag, defaultNodeDriver, "Name of the node driver to use")
@@ -939,6 +967,7 @@ func ParseFlags() {
 	flag.StringVar(&vaultToken, "vault-token", "", "Path to custom configuration files")
 	flag.StringVar(&schedUpgradeHops, "sched-upgrade-hops", "", "Comma separated list of versions scheduler upgrade to take hops")
 	flag.StringVar(&autopilotUpgradeImage, autopilotUpgradeImageCliFlag, "", "Autopilot version which will be used for checking version after upgrade autopilot")
+	flag.StringVar(&csiGenericDriverConfigMapName, csiGenericDriverConfigMapFlag, "", "Name of config map that stores provisioner details when CSI generic driver is being used")
 	flag.Parse()
 
 	appList, err := splitCsv(appListCSV)
@@ -1011,6 +1040,7 @@ func ParseFlags() {
 				VaultToken:                          vaultToken,
 				SchedUpgradeHops:                    schedUpgradeHops,
 				AutopilotUpgradeImage:               autopilotUpgradeImage,
+				CsiGenericDriverConfigMap:           csiGenericDriverConfigMapName,
 			}
 		})
 	}

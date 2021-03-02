@@ -143,6 +143,11 @@ if [ -n "${MAX_STORAGE_NODES_PER_AZ}" ]; then
     MAX_STORAGE_NODES_PER_AZ_ARG="--max-storage-nodes-per-az=$MAX_STORAGE_NODES_PER_AZ"
 fi
 
+CSI_GENERIC_CONFIGMAP=""
+if [ -n "${CSI_GENERIC_DRIVER_CONFIGMAP}" ]; then
+    CSI_GENERIC_CONFIGMAP="${CSI_GENERIC_DRIVER_CONFIGMAP}"
+fi
+
 for i in $@
 do
 case $i in
@@ -176,6 +181,7 @@ if [ -z "${AUTOPILOT_UPGRADE_VERSION}" ]; then
     AUTOPILOT_UPGRADE_VERSION=""
 fi
 
+kubectl delete secret torpedo
 kubectl delete pod torpedo
 state=`kubectl get pod torpedo | grep -v NAME | awk '{print $3}'`
 timeout=0
@@ -250,6 +256,12 @@ if [ -n "${TORPEDO_CUSTOM_PARAM_MOUNT}" ]; then
     VOLUME_MOUNTS="${VOLUME_MOUNTS},${TORPEDO_CUSTOM_PARAM_MOUNT}"
 fi
 
+BUSYBOX_IMG="busybox"
+if [ -n "${INTERNAL_DOCKER_REGISTRY}" ]; then
+    BUSYBOX_IMG="${INTERNAL_DOCKER_REGISTRY}/busybox"
+    TORPEDO_IMG="${INTERNAL_DOCKER_REGISTRY}/${TORPEDO_IMG}"
+fi
+
 # List of additional kubeconfigs of k8s clusters to register with px-backup, px-dr
 FROM_FILE=""
 CLUSTER_CONFIGS=""
@@ -269,7 +281,9 @@ fi
 K8S_VENDOR_KEY=""
 K8S_VENDOR_VALUE=""
 K8S_VENDOR_OPERATOR="Exists"
-NODE_DRIVER="ssh"
+if [ -z "${NODE_DRIVER}" ]; then
+    NODE_DRIVER="ssh"
+fi
 if [ -n "${K8S_VENDOR}" ]; then
     case "$K8S_VENDOR" in
         kubernetes)
@@ -370,7 +384,7 @@ spec:
             ${K8S_VENDOR_VALUE}
   initContainers:
   - name: init-sysctl
-    image: busybox
+    image: ${BUSYBOX_IMG}
     imagePullPolicy: IfNotPresent
     securityContext:
       privileged: true
@@ -412,6 +426,7 @@ spec:
             "--vault-addr=$VAULT_ADDR",
             "--vault-token=$VAULT_TOKEN",
             "--autopilot-upgrade-version=$AUTOPILOT_UPGRADE_VERSION",
+            "--csi-generic-driver-config-map=$CSI_GENERIC_CONFIGMAP",
             "$APP_DESTROY_TIMEOUT_ARG",
             "$SCHEDULER_UPGRADE_HOPS_ARG",
             "$MAX_STORAGE_NODES_PER_AZ_ARG"
@@ -457,12 +472,45 @@ spec:
       value: "${S3_DISABLE_SSL}"
     - name: PROVIDERS
       value: "${PROVIDERS}"
+    - name: INTERNAL_DOCKER_REGISTRY
+      value: "$INTERNAL_DOCKER_REGISTRY"
+    - name: IMAGE_PULL_SERVER
+      value: "$IMAGE_PULL_SERVER"
+    - name: IMAGE_PULL_USERNAME
+      value: "$IMAGE_PULL_USERNAME"
+    - name: IMAGE_PULL_PASSWORD
+      value: "$IMAGE_PULL_PASSWORD"
+    - name: VSPHERE_USER
+      value: "${VSPHERE_USER}"
+    - name: VSPHERE_PWD
+      value: "${VSPHERE_PWD}"
+    - name: VSPHERE_HOST_IP
+      value: "${VSPHERE_HOST_IP}"
   volumes: [${VOLUMES}]
   restartPolicy: Never
   serviceAccountName: torpedo-account
 EOF
 
+if [ ! -z $IMAGE_PULL_SERVER ] && [ ! -z $IMAGE_PULL_USERNAME ] && [ ! -z $IMAGE_PULL_PASSWORD ]; then
+  echo "Adding Docker registry secret ..."
+  auth=$(echo "$IMAGE_PULL_USERNAME:$IMAGE_PULL_PASSWORD" | base64)
+  secret=$(echo "{\"auths\":{\"$IMAGE_PULL_SERVER\":{\"username\":\"$IMAGE_PULL_USERNAME\",\"password\":\"$IMAGE_PULL_PASSWORD\",\"auth\":"$auth"}}}" | base64 -w 0)
+  cat >> torpedo.yaml <<EOF
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: torpedo
+type: docker-registry
+data:
+  .dockerconfigjson: $secret
+
+EOF
+  sed -i '/spec:/a\  imagePullSecrets:\n    - name: torpedo' torpedo.yaml
+fi
+
 cat torpedo.yaml
+
 echo "Deploying torpedo pod..."
 kubectl apply -f torpedo.yaml
 
