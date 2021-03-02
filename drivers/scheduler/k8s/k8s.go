@@ -340,32 +340,13 @@ func (k *K8s) ParseSpecs(specDir, storageProvisioner string) ([]interface{}, err
 			if err != nil {
 				return nil, err
 			}
-
-			reader := bufio.NewReader(&processedFile)
-			specReader := yaml.NewYAMLReader(reader)
-
-			for {
-				specContents, err := specReader.Read()
-				if err == io.EOF {
-					break
-				}
-				if len(bytes.TrimSpace(specContents)) > 0 {
-					obj, err := decodeSpec(specContents)
-					if err != nil {
-						logrus.Warnf("Error decoding spec from %v: %v", fileName, err)
-						return nil, err
-					}
-
-					specObj, err := validateSpec(obj)
-					if err != nil {
-						logrus.Warnf("Error parsing spec from %v: %v", fileName, err)
-						return nil, err
-					}
-
-					substituteImageWithInternalRegistry(specObj)
-					specs = append(specs, specObj)
-				}
+			parsedSpecs, err := k.ParseSpecsFromYamlBuf(&processedFile)
+			if err != nil {
+				logrus.Warnf("Error parsing spec from %v: %v", fileName, err)
+				return nil, err
 			}
+
+			specs = append(specs, parsedSpecs...)
 		} else {
 			repoInfo, err := k.ParseCharts(fileName)
 			if err != nil {
@@ -423,16 +404,18 @@ func (k *K8s) ParseSpecsFromYamlBuf(yamlBuf *bytes.Buffer) ([]interface{}, error
 		if len(bytes.TrimSpace(specContents)) > 0 {
 			obj, err := decodeSpec(specContents)
 			if err != nil {
-				logrus.Warnf("Error decoding spec from : %v", err)
+				logrus.Warnf("Error decoding spec: %v", err)
 				return nil, err
 			}
+
 			specObj, err := validateSpec(obj)
 			if err != nil {
-				logrus.Warnf("Error parsing spec from : %v", err)
+				logrus.Warnf("Error validating spec: %v", err)
 				return nil, err
             }
 
-            specs = append(specs, specObj)
+			substituteImageWithInternalRegistry(specObj)
+			specs = append(specs, specObj)
         }
     }
 
@@ -614,6 +597,12 @@ func (k *K8s) Schedule(instanceID string, options scheduler.ScheduleOptions) ([]
 			return nil, err
 		}
 
+		helmSpecObjects, err := k.HelmSchedule(app, appNamespace, options)
+		if err != nil {
+			return nil, err
+		}
+
+		specObjects = append(specObjects, helmSpecObjects...)
 		ctx := &scheduler.Context{
 			UID: instanceID,
 			App: &spec.AppSpec{
@@ -623,12 +612,6 @@ func (k *K8s) Schedule(instanceID string, options scheduler.ScheduleOptions) ([]
 			},
 			ScheduleOptions: options,
 		}
-
-		helmSpecObjects, err := k.HelmSchedule(app, appNamespace, options)
-		if err != nil {
-			return nil, err
-		}
-		ctx.App.SpecList = append(ctx.App.SpecList, helmSpecObjects...)
 
 		contexts = append(contexts, ctx)
 	}
