@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	. "github.com/onsi/gomega"
+	"github.com/portworx/torpedo/drivers/node"
 	"github.com/portworx/torpedo/drivers/scheduler"
 	. "github.com/portworx/torpedo/tests"
 	"github.com/sirupsen/logrus"
@@ -25,7 +26,7 @@ func TestPxcentral(t *testing.T) {
 	var specReporters []Reporter
 	junitReporter := reporters.NewJUnitReporter("/testresults/junit_basic.xml")
 	specReporters = append(specReporters, junitReporter)
-	RunSpecsWithDefaultAndCustomReporters(t, "Torpedo : pxcentral", specReporters)
+	RunSpecsWithDefaultAndCustomReporters(t, "Torpedo : px-central", specReporters)
 }
 
 var _ = BeforeSuite(func() {
@@ -34,31 +35,65 @@ var _ = BeforeSuite(func() {
 })
 
 // This test performs basic test of installing px-central with helm
+// px-license-server and px-minotor will be installed after px-central is validated
 var _ = Describe("{Installpxcentral}", func() {
 	It("has to setup, validate and teardown apps", func() {
-
-		// Install the storage class
-		appName := "pxcentral"
-		contexts := ScheduleApplications(appName)
-
-		// Skipping volume validation until other volume providers are implemented.
-		// Also change the app readinessTimeout to 20mins
-		for _, ctx := range contexts {
-			ctx.SkipVolumeValidation = true
-			ctx.ReadinessTimeout = appReadinessTimeout
+		var context *scheduler.Context
+		lsOptions := scheduler.ScheduleOptions{
+			AppKeys:            []string{"px-license-server"},
+			StorageProvisioner: Inst().Provisioner,
 		}
 
-		ValidateApplications(contexts)
-		logrus.Infof("Successfully validated specs for pxcentral app")
+		Step("Install px-central using the px-backup helm chart then validate", func() {
+			contexts, err := Inst().S.Schedule(Inst().InstanceID, scheduler.ScheduleOptions{
+				AppKeys:            []string{"px-central"},
+				StorageProvisioner: Inst().Provisioner,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(contexts).NotTo(BeEmpty())
+
+			// Skipping volume validation until other volume providers are implemented.
+			// Also change the app readinessTimeout to 20mins
+			context = contexts[0]
+			context.SkipVolumeValidation = true
+			context.ReadinessTimeout = appReadinessTimeout
+
+			ValidateContext(context)
+			logrus.Infof("Successfully validated specs for px-central")
+		})
+
+		Step("Install px-license-server then validate", func() {
+			// label px/ls=true on 2 worker nodes
+			for i, node := range node.GetWorkerNodes() {
+				if i == 2 {
+					break
+				}
+				err := Inst().S.AddLabelOnNode(node, "px/ls", "true")
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			err := Inst().S.AddTasks(context, lsOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			ValidateContext(context)
+			logrus.Infof("Successfully validated specs for px-license-server")
+		})
+
+		Step("Uninstall license server and monitoring", func() {
+			err := Inst().S.ScheduleUninstall(context, lsOptions)
+			Expect(err).NotTo(HaveOccurred())
+
+			ValidateContext(context)
+			logrus.Infof("Successfully uninstalled px-license-server")
+		})
 
 		Step("destroy apps", func() {
 			opts := make(map[string]bool)
 			opts[scheduler.OptionsWaitForResourceLeakCleanup] = true
-			for _, ctx := range contexts {
-				TearDownContext(ctx, opts)
-			}
+
+			TearDownContext(context, opts)
+			logrus.Infof("Successfully destroyed px-central")
 		})
-		logrus.Infof("Successfully destroyed pxcentral app")
 	})
 })
 

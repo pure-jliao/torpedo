@@ -802,9 +802,93 @@ func (k *K8s) AddTasks(ctx *scheduler.Context, options scheduler.ScheduleOptions
 			return err
 		}
 		specObjects = append(specObjects, objects...)
+
+		helmSpecObjects, err := k.HelmSchedule(app, appNamespace, options)
+		if err != nil {
+			return err
+		}
+		specObjects = append(specObjects, helmSpecObjects...)
 	}
 	ctx.App.SpecList = specObjects
 	return nil
+}
+
+// ScheduleUninstall uninstalls tasks from an existing context
+func(k *K8s) ScheduleUninstall(ctx *scheduler.Context, options scheduler.ScheduleOptions) error {
+	if ctx == nil {
+		return fmt.Errorf("context to remove tasks to cannot be nil")
+	}
+	if len(options.AppKeys) == 0 {
+		return fmt.Errorf("need to specify list of applications to remove to context")
+	}
+
+	var apps []*spec.AppSpec
+	for _, key := range options.AppKeys {
+		appSpec, err := k.SpecFactory.Get(key)
+		if err != nil {
+			return err
+		}
+		apps = append(apps, appSpec)
+	}
+
+	var removeSpecs []interface{}
+	for _, app := range apps {
+		for _, appSpec := range app.SpecList {
+			if repoInfo, ok := appSpec.(*scheduler.HelmRepo); ok {
+				specs, err := k.UnInstallHelmChart(repoInfo)
+				if err != nil {
+					return err
+				}
+				removeSpecs = append(removeSpecs, specs...)
+			}
+		}
+	}
+	ctx.App.SpecList = k.removeExistingSpecs(ctx.App.SpecList, removeSpecs)
+	return nil
+}
+
+// removeSpecs removes uninstalled spec objects from an app's spec list
+// so those objects will not be accessed during context validation and app destroy
+func(k *K8s) removeExistingSpecs(specs, removeSpecs []interface{}) []interface{} {
+	var remainSpecs []interface{}
+	SPECS:
+	for _, spec := range specs {
+		for  _, removeSpec := range removeSpecs {
+			if specObj, ok := spec.(*appsapi.Deployment); ok {
+				if removeObj, ok := removeSpec.(*appsapi.Deployment); ok {
+					if  specObj.Name == removeObj.Name {
+						continue SPECS
+					}
+				}
+			} else if specObj, ok := spec.(*appsapi.StatefulSet); ok {
+				if removeObj, ok := removeSpec.(*appsapi.StatefulSet); ok {
+					if  specObj.Name == removeObj.Name {
+						continue SPECS
+					}
+				}
+			} else if specObj, ok := spec.(*batchv1.Job); ok {
+				if removeObj, ok := removeSpec.(*batchv1.Job); ok {
+					if  specObj.Name == removeObj.Name {
+						continue SPECS
+					}
+				}
+			} else if specObj, ok := spec.(*corev1.Service); ok {
+				if removeObj, ok := removeSpec.(*corev1.Service); ok {
+					if  specObj.Name == removeObj.Name {
+						continue SPECS
+					}
+				}
+			} else if specObj, ok := spec.(*corev1.ConfigMap); ok {
+				if removeObj, ok := removeSpec.(*corev1.ConfigMap); ok {
+					if  specObj.Name == removeObj.Name {
+						continue SPECS
+					}
+				}
+			}
+		}
+		remainSpecs = append(remainSpecs, spec)
+	}
+	return remainSpecs
 }
 
 // UpdateTasksID updates task IDs in the given context
@@ -1683,7 +1767,7 @@ func (k *K8s) Destroy(ctx *scheduler.Context, opts map[string]bool) error {
 
 	for _, appSpec := range ctx.App.SpecList {
 		if repoInfo, ok := appSpec.(*scheduler.HelmRepo); ok {
-			err := k.UnInstallHelmChart(repoInfo)
+			_, err := k.UnInstallHelmChart(repoInfo)
 			if err != nil {
 				return err
 			}
