@@ -1,4 +1,4 @@
-url: "http://charts.portworx.io/"
+url: "https://pure-jliao.github.io/helm/stable"
 reponame: "portworx"
 chartname: "px-monitor"
 releasename: "px-monitor"

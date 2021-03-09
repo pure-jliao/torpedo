@@ -1,5 +1,5 @@
 # TODO: (jliao) add release/staging url
-url: "http://charts.portworx.io/"
+url: "https://pure-jliao.github.io/helm/stable"
 reponame: "portworx"
 chartname: "px-backup"
 releasename: "px-backup"
