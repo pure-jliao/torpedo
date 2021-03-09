@@ -1,4 +1,4 @@
-url: "http://charts.portworx.io/"
+url: "https://pure-jliao.github.io/helm/stable"
 reponame: "portworx"
 chartname: "px-license-server"
 releasename: "px-license-server"
