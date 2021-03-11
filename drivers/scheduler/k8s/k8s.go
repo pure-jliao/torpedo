@@ -42,6 +42,7 @@ import (
 	"github.com/portworx/torpedo/drivers/scheduler/spec"
 	"github.com/portworx/torpedo/drivers/volume"
 	"github.com/portworx/torpedo/pkg/aututils"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
 	appsapi "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -450,6 +451,10 @@ func decodeSpec(specContents []byte) (runtime.Object, error) {
 			return nil, err
 		}
 
+		if err := monitoringv1.AddToScheme(schemeObj); err != nil {
+			return nil, err
+		}
+
 		codecs := serializer.NewCodecFactory(schemeObj)
 		obj, _, err = codecs.UniversalDeserializer().Decode([]byte(specContents), nil, nil)
 		if err != nil {
@@ -521,6 +526,12 @@ func validateSpec(in interface{}) (interface{}, error) {
 	} else if specObj, ok := in.(*corev1.LimitRange); ok {
 		return specObj, nil
 	} else if specObj, ok := in.(*networkingv1beta1.Ingress); ok {
+		return specObj, nil
+	} else if specObj, ok := in.(*monitoringv1.Prometheus); ok {
+		return specObj, nil
+	} else if specObj, ok := in.(*monitoringv1.PrometheusRule); ok {
+		return specObj, nil
+	} else if specObj, ok := in.(*monitoringv1.ServiceMonitor); ok {
 		return specObj, nil
 	}
 
